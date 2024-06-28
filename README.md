@@ -32,6 +32,13 @@ h = HasuraParser()
 g = h.generate_graph("./metadata/graph.json")
 g.prune()
 net = g.show()
-net.write_html("/tmp/index.html", open_browser=True)
+net.write_html("index.html", open_browser=True)
 ```
 
+# TODO
+
+- Prune graph, remove impossible relationships because the foreign key is filtered out.
+- Graph diff (highlight changes between two graphs).
+- Test paths between tables and highlight unprotected paths.
+- Better filtering options and node/edge tooltips with more information.
+- Returns out pyvis is quite buggy and unmaintained, maybe replace by https://plotly.com/python/network-graphs/.
