@@ -31,6 +31,7 @@ from hasura_permission_checker.hasura import HasuraParser
 h = HasuraParser()
 g = h.generate_graph("./metadata/graph.json")
 g.prune()
-net = h.visualize_graph(g)
-net.write_html("index.html", open_browser=True)
+net = g.show()
+net.write_html("/tmp/index.html", open_browser=True)
 ```
+
