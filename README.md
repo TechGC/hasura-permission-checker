@@ -20,3 +20,16 @@ I intent to implement more features like:
 ## Development
 
 Run `pip install -e .` to install the project dependencies.
+
+## Example
+
+In a jupyter notebook/console run the following and a new tab will open with the graph:
+
+```python
+from hasura_permission_checker.hasura import HasuraParser
+h = HasuraParser()
+g = h.generate_graph("./metadata/graph.json")
+g.prune()
+net = h.generate_network(g)
+net.write_html("index.html", open_browser=True)
+```
