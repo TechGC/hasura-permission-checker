@@ -1,8 +1,6 @@
 import json
 from typing import Any
 
-from pyvis.network import Network
-
 from hasura_permission_checker.graph import Graph, Node, Edge
 
 
@@ -56,47 +54,6 @@ class HasuraParser:
                 g.add_edge(edge)
 
         return g
-
-    @staticmethod
-    def generate_network(g: Graph) -> Network:
-        net = Network(
-            notebook=True,
-            cdn_resources="remote",
-            neighborhood_highlight=True,
-            select_menu=True,
-            directed=True,
-            layout=True,
-            filter_menu=True
-        )
-
-        # set the physics layout of the network
-        net.barnes_hut()
-
-        for n in g.nodes:
-            e_from, e_to = g.neighbors(n)
-            n_neighbours = len(e_from) + len(e_to)
-            n_size = 20 + min(n_neighbours, 20)
-            color = "red" if n.has_attr("is_root", "True") else "blue"
-            border = "yellow" if n.has_attr("role", "public_role") else "blue"
-            net.add_node(
-                n.nid,
-                label=n.label,
-                title=n.title,
-                size=n_size,
-                color=color,
-                **n.attrs,
-            )
-
-        for e in g.edges:
-            net.add_edge(
-                e.node_from.nid,
-                e.node_to.nid,
-                arrows={"from": True},
-                arrowStrikethrough=True,
-            )
-        net.toggle_physics(False)
-        net.show_buttons(filter_=["physics"])
-        return net
 
     @staticmethod
     def _get_table_role(table: dict[str, Any]) -> str | None:

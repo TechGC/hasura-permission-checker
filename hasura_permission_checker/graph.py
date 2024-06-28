@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from itertools import chain
 from typing import Any
 
+from pyvis.network import Network
+
 
 @dataclass
 class Edge:
@@ -129,12 +131,49 @@ class Graph:
 
         return nodes_removed
 
+    def show(self) -> Network:
+        net = Network(
+            notebook=True,
+            cdn_resources="remote",
+            neighborhood_highlight=True,
+            select_menu=True,
+            directed=True,
+            layout=True,
+            filter_menu=True,
+        )
+
+        # set the physics layout of the network
+        net.barnes_hut()
+
+        for n in self.nodes:
+            e_from, e_to = self.neighbors(n)
+            n_neighbours = len(e_from) + len(e_to)
+            n_size = 20 + min(n_neighbours, 20)
+            color = "red" if n.has_attr("is_root", "True") else "blue"
+            border = "yellow" if n.has_attr("role", "public_role") else "blue"
+            net.add_node(
+                n.nid,
+                label=n.label,
+                title=n.title,
+                size=n_size,
+                color=color,
+                **n.attrs,
+            )
+
+        for e in self.edges:
+            net.add_edge(
+                e.node_from.nid,
+                e.node_to.nid,
+                arrows={"from": True},
+                arrowStrikethrough=True,
+            )
+        net.toggle_physics(False)
+        net.show_buttons(filter_=["physics"])
+        return net
+
     def __contains__(self, key: Node | Edge) -> bool:
         if isinstance(key, Node):
             return key in self.nodes
         if isinstance(key, Edge):
             return key in self.edges
         return False
-
-
-
