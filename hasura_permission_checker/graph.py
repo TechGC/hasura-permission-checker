@@ -12,7 +12,7 @@ class Edge:
     node_to: Node
 
     def __hash__(self) -> int:
-        return hash((self.node_from.nid, self.node_to.nid))
+        return hash((self.node_from, self.node_to))
 
     def __repr__(self) -> str:
         return f"Edge({self.node_from} -> {self.node_to})"
@@ -20,14 +20,18 @@ class Edge:
 
 @dataclass
 class Node:
-    nid: int
-    label: str
-    title: str
+    name: str
+    title: str = field(default_factory=str)
     attrs: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     edges_before: set[Edge] = field(default_factory=set)
     edges_after: set[Edge] = field(default_factory=set)
+
+    @property
+    def nid(self) -> int:
+        """Graphiz need a numerical node id."""
+        return self.__hash__()
 
     def contribute_to_permissions(self) -> bool:
         if self.has_attr("is_root", "True"):
@@ -35,14 +39,14 @@ class Node:
         return False
 
     def has_attr(self, key: str, value) -> bool:
-        attrs = {**self.attrs, "title": self.title, "label": self.label}
+        attrs = {**self.attrs, "title": self.title, "name": self.name}
         return key in self.attrs and attrs[key] == value
 
     def __hash__(self) -> int:
-        return self.nid
+        return hash(self.name)
 
     def __repr__(self) -> str:
-        return f"Node({self.nid}, {self.label})"
+        return f"Node({self.name}, {self.nid})"
 
 
 @dataclass
@@ -51,6 +55,8 @@ class Graph:
     edges: set[Edge] = field(default_factory=set)
 
     def add_node(self, n: Node):
+        if n in self:
+            raise ValueError(f"Node {n} already in graph")
         self.nodes.add(n)
 
     def add_edge(self, e: Edge, symmetric: bool = False):
@@ -81,11 +87,11 @@ class Graph:
     def get_nodes_by_attr(self, key: str, value: Any) -> list[Node]:
         return [n for n in self.nodes if n.has_attr(key, value)]
 
-    def get_node_by_label(self, label: str) -> Node:
+    def get_node_by_name(self, name: str) -> Node:
         for n in self.nodes:
-            if n.label == label:
+            if n.name == name:
                 return n
-        raise ValueError(f"Node with label {label} not found")
+        raise ValueError(f"Node with name {name} not found")
 
     def get_node_by_id(self, nid: int) -> Node:
         for n in self.nodes:
@@ -150,10 +156,9 @@ class Graph:
             n_neighbours = len(e_from) + len(e_to)
             n_size = 20 + min(n_neighbours, 20)
             color = "red" if n.has_attr("is_root", "True") else "blue"
-            border = "yellow" if n.has_attr("role", "public_role") else "blue"
             net.add_node(
-                n.nid,
-                label=n.label,
+                n_id=n.nid,
+                name=n.name,
                 title=n.title,
                 size=n_size,
                 color=color,

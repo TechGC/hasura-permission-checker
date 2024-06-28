@@ -25,18 +25,18 @@ class HasuraParser:
                 "role": self._get_table_role(t),
                 "is_root": str(self._is_root_table(t)),
             }
-            node = Node(nid=nid, label=t_name, title=t_name, attrs=attrs)
+            node = Node(name=t_name, title=t_name, attrs=attrs)
             g.add_node(node)
 
         # Create edges
         for t in tables:
             t_name = t["table"]["name"]
-            src = g.get_node_by_label(t_name)
+            src = g.get_node_by_name(t_name)
 
             for r in t.get("array_relationships", []):
                 r_to = r["using"]["foreign_key_constraint_on"]["table"]["name"]
                 try:
-                    dst = g.get_node_by_label(r_to)
+                    dst = g.get_node_by_name(r_to)
                 except ValueError:
                     print(f"Ignoring invalid array relationship: {t_name} -> {r_to}")
                     continue
@@ -46,7 +46,7 @@ class HasuraParser:
             for r in t.get("object_relationships", []):
                 r_to = r["name"]
                 try:
-                    dst = g.get_node_by_label(r_to)
+                    dst = g.get_node_by_name(r_to)
                 except ValueError:
                     print(f"Ignoring invalid array relationship: {t_name} -> {r_to}")
                     continue
