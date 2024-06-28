@@ -3,7 +3,7 @@ from typing import Any
 
 from pyvis.network import Network
 
-from graph import Graph, Node, Edge
+from hasura_permission_checker.graph import Graph, Node, Edge
 
 
 class HasuraParser:

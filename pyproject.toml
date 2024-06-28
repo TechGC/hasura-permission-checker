@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hasura-permission-checker"
+version = "0.0.1"
+dependencies = [
+  "pyvis",
+]
+requires-python = ">=3.12"
+authors = [
+]
+maintainers = [
+  {name = "Diego Pasqualin", email = "diego.pasqualin@thesuite.com"}
+]
+description = "Debugging and Testing Hasura permissions"
+readme = "README.md"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Repository = "https://github.com/TechGC/hasura-permission-checker"

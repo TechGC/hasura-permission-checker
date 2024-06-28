@@ -14,5 +14,9 @@ I intent to implement more features like:
 - Better filtering options and node/edge tooltips with more information.
  
 
-
 ![Graph](./metadata/graph-example.png)
+
+
+## Development
+
+Run `pip install -e .` to install the project dependencies.
