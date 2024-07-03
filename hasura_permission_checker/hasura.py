@@ -1,3 +1,4 @@
+import itertools
 import json
 from typing import Any
 
@@ -12,67 +13,111 @@ class HasuraParser:
             metadata = json.loads(f.read())
         return metadata
 
-    def generate_graph(self, filename: str) -> Graph:
+    def generate_all_graph(self, filename: str, role: str) -> list[Graph]:
+        metadata = self.read_metadata(filename)
+        tables = [i for i in metadata["sources"][0]["tables"]]
+        available_roles = self._get_available_roles(tables)
+        pass
 
+    def generate_graph(self, filename: str, role: str) -> Graph:
         g = Graph()
         metadata = self.read_metadata(filename)
         tables = [i for i in metadata["sources"][0]["tables"]]
 
         # Create nodes
+        node_not_included = set()
         for nid, t in enumerate(tables):
             t_name = t["table"]["name"]
-            attrs = {
-                "role": self._get_table_role(t),
-                "is_root": str(self._is_root_table(t)),
-            }
-            node = Node(name=t_name, title=t_name, attrs=attrs)
+            if not (permissions := self._get_selection_permissions(t, role)):
+                node_not_included.add(t_name)
+                continue
+            node = Node(
+                name=t_name,
+                available_roles=self._get_table_roles(t),
+                permissions=permissions,
+                metadata=t,
+                is_root=self._is_root_table(t, role),
+                role=role,
+            )
             g.add_node(node)
 
         # Create edges
         for t in tables:
             t_name = t["table"]["name"]
-            src = g.get_node_by_name(t_name)
+            try:
+                node_from = g.get_node_by_name(t_name)
+            except ValueError:
+                # Node wasn't added because it has no permissions
+                continue
 
-            for r in t.get("array_relationships", []):
-                r_to = r["using"]["foreign_key_constraint_on"]["table"]["name"]
+            relationships = itertools.chain(
+                t.get("array_relationships", []),
+                t.get("object_relationships", [])
+            )
+            for r in relationships:
                 try:
-                    dst = g.get_node_by_name(r_to)
-                except ValueError:
-                    print(f"Ignoring invalid array relationship: {t_name} -> {r_to}")
-                    continue
-                edge = Edge(node_from=src, node_to=dst)
-                g.add_edge(edge)
+                    # array relationship
+                    r_to = r["using"]["foreign_key_constraint_on"]["table"]["name"]
+                    r_type = "1:N"
+                except (TypeError, KeyError):
+                    # object relationship
+                    r_type = "1:1"
+                    r_to = r["name"]
 
-            for r in t.get("object_relationships", []):
-                r_to = r["name"]
                 try:
-                    dst = g.get_node_by_name(r_to)
+                    node_to = g.get_node_by_name(r_to)
                 except ValueError:
-                    print(f"Ignoring invalid array relationship: {t_name} -> {r_to}")
+                    if r_to not in node_not_included:
+                        print(f"Skipping edge: unknown table {r_to} referenced by {t_name}.")
                     continue
-                edge = Edge(node_from=src, node_to=dst)
+
+                edge = Edge(
+                    node_from=node_from,
+                    node_to=node_to,
+                    relationship=r_type,
+                    filter_on=node_from.filter_on,
+                    metadata=r,
+                )
+
                 g.add_edge(edge)
 
         return g
 
     @staticmethod
-    def _get_table_role(table: dict[str, Any]) -> str | None:
+    def _get_selection_permissions(table: dict[str, Any], role: str) -> dict[str, Any]:
         for sp in table.get("select_permissions", []):
-            if role := sp.get("role"):
-                return role
-        return None
+            if sp.get("role") == role:
+                return sp.get("permission", {})
+        return {}
 
     @staticmethod
-    def _is_root_table(table: dict[str, Any]) -> bool:
-        for sp in table.get("select_permissions", []):
-            qrf = sp["permission"].get("query_root_fields")
-            srf = sp["permission"].get("subscription_root_fields")
+    def _get_table_roles(table: dict[str, Any]) -> list[str]:
+        return [r for sp in table.get("select_permissions", []) if (r := sp.get("role"))]
 
-            if qrf is None and srf is None:
-                return True
-            # TODO implement the case where the fields had ["select"]
-            if isinstance(qrf, list) and len(qrf) > 1:
-                return True
-            if isinstance(srf, list) and len(qrf) > 1:
-                return True
+    @classmethod
+    def _get_available_roles(cls, tables: list[dict[str, Any]]) -> set[str]:
+        return set(r for t in tables for r in cls._get_table_roles(t))
+
+    @classmethod
+    def _is_root_table(cls, table: dict[str, Any], role: str) -> bool:
+        permission = cls._get_selection_permissions(table, role)
+        if not permission:
+            # no permission defined, everything is allowed
+            return True
+
+        qrf = permission.get("query_root_fields")
+        srf = permission.get("subscription_root_fields")
+
+        if qrf is None and srf is None:
+            # no permission defined, everything is allowed
+            return True
+
+        # If there is a list and it is not empty, return True
+        # TODO implement the case where the fields had ["select"]
+        if isinstance(qrf, list) and len(qrf) > 1:
+            return True
+        if isinstance(srf, list) and len(srf) > 1:
+            return True
+
         return False
+
