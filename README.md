@@ -1,5 +1,7 @@
 # hasura-permission-checker
 
+**NOTE**: we have decided to hide Hasura behind a proxy and lock permissions, and as a result this tool is not under development anymore.
+
 This is a simple tool **under development** for debugging and testing the permissions in Hasura.
 Right now it can create an interactive graph (example below) highlighting in red the root nodes (tables that the frontend
 can query directly). Nodes have label (table name) and role (private/public) attributes that you can filter by.
